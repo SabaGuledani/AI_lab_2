@@ -10,14 +10,13 @@
 
 #include "util.h"
 
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <cstdlib>  // To establish the seed srand() and generate pseudorandom numbers rand()
 #include <limits>
 #include <math.h>
+#include <cmath>
 
 
 using namespace imc;
@@ -30,7 +29,6 @@ MultilayerPerceptron::MultilayerPerceptron()
 {
 
 }
-
 
 // ------------------------------
 // Allocate memory for the data structures
@@ -98,7 +96,6 @@ int MultilayerPerceptron::initialize(int nl, int npl[]) {
 MultilayerPerceptron::~MultilayerPerceptron() {
 	freeMemory();
 }
-
 
 
 // ------------------------------
@@ -311,103 +308,111 @@ void MultilayerPerceptron::printNetwork() {
 // ------------------------------
 // Perform an epoch: forward propagate the inputs, backpropagate the error and adjust the weights
 // input is the input vector of the pattern and target is the desired output vector of the pattern
-// The step of adjusting the weights must be performed only in the online case
-// If the algorithm is offline, the weightAdjustment must be performed in the "train" function
-// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-void MultilayerPerceptron::performEpoch(double* input, double* target, int errorFunction) {
-}
-
-// ------------------------------
-// Train the network for a dataset (one iteration of the external loop)
-// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-void MultilayerPerceptron::train(Dataset* trainDataset, int errorFunction) {
-}
-
-// ------------------------------
-// Test the network with a dataset and return the error
-// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-double MultilayerPerceptron::test(Dataset* dataset, int errorFunction) {
+void MultilayerPerceptron::performEpochOnline(double* input, double* target) {
+    feedInputs(input);
+    forwardPropagate();
+    backpropagateError(target);
+    weightAdjustment();
 }
 
 
 // ------------------------------
-// Test the network with a dataset and return the CCR
-double MultilayerPerceptron::testClassification(Dataset* dataset) {
+// Perform an online training for a specific trainDataset
+void MultilayerPerceptron::trainOnline(Dataset* trainDataset) {
+	int i;
+	for(i=0; i<trainDataset->nOfPatterns; i++){
+		performEpochOnline(trainDataset->inputs[i], trainDataset->outputs[i]);
+	}
+}
+
+// ------------------------------
+// Test the network with a dataset and return the MSE
+double MultilayerPerceptron::test(Dataset* testDataset) {
+    double totalError = 0.0;
+    double* prediction = new double[testDataset->nOfOutputs];
+
+    for (int i = 0; i < testDataset->nOfPatterns; i++) {
+        feedInputs(testDataset->inputs[i]);
+        forwardPropagate();
+        getOutputs(prediction);
+        totalError += obtainError(testDataset->outputs[i]);
+    }
+
+    delete[] prediction;
+    return totalError / testDataset->nOfPatterns;
 }
 
 
-// ------------------------------
-// Optional Kaggle: Obtain the predicted outputs for a dataset
-void MultilayerPerceptron::predict(Dataset* dataset)
+
+// Optional - KAGGLE
+// Test the network with a dataset and return the MSE
+// Your have to use the format from Kaggle: two columns (Id y predictied)
+void MultilayerPerceptron::predict(Dataset* pDatosTest)
 {
 	int i;
 	int j;
 	int numSalidas = layers[nOfLayers-1].nOfNeurons;
-	double * salidas = new double[numSalidas];
+	double * obtained = new double[numSalidas];
 	
-	cout << "Id,Category" << endl;
+	cout << "Id,Predicted" << endl;
 	
-	for (i=0; i<dataset->nOfPatterns; i++){
+	for (i=0; i<pDatosTest->nOfPatterns; i++){
 
-		feedInputs(dataset->inputs[i]);
+		feedInputs(pDatosTest->inputs[i]);
 		forwardPropagate();
-		getOutputs(salidas);
-
-		int maxIndex = 0;
-		for (j = 0; j < numSalidas; j++)
-			if (salidas[j] >= salidas[maxIndex])
-				maxIndex = j;
+		getOutputs(obtained);
 		
-		cout << i << "," << maxIndex << endl;
+		cout << i;
+
+		for (j = 0; j < numSalidas; j++)
+			cout << "," << obtained[j];
+		cout << endl;
 
 	}
 }
-
-
 
 // ------------------------------
 // Run the traning algorithm for a given number of epochs, using trainDataset
 // Once finished, check the performance of the network in testDataset
 // Both training and test MSEs should be obtained and stored in errorTrain and errorTest
-// Both training and test CCRs should be obtained and stored in ccrTrain and ccrTest
-// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-void MultilayerPerceptron::runBackPropagation(Dataset * trainDataset, Dataset * testDataset, int maxiter, double *errorTrain, double *errorTest, double *ccrTrain, double *ccrTest, int errorFunction)
+void MultilayerPerceptron::runOnlineBackPropagation(Dataset * trainDataset, Dataset * pDatosTest, int maxiter, double *errorTrain, double *errorTest)
 {
 	int countTrain = 0;
 
 	// Random assignment of weights (starting point)
 	randomWeights();
 
-    double minTrainError = 0.0;
-    int iterWithoutImproving = 0;
-    nOfTrainingPatterns = trainDataset->nOfPatterns;
+	double minTrainError = 0;
+	int iterWithoutImproving;
+	double testError = 0;
 
-    // Learning (currently behaves like the previous online outer loop)
-    do {
-        // One external-iteration training step (online/offline to be handled inside train)
-        train(trainDataset, errorFunction);
+	// Learning
+	do {
 
-        double trainError = test(trainDataset, errorFunction);
+		trainOnline(trainDataset);
+		double trainError = test(trainDataset);
+		if(countTrain==0 || trainError < minTrainError){
+			minTrainError = trainError;
+			copyWeights();
+			iterWithoutImproving = 0;
+		}
+		else if( (trainError-minTrainError) < 0.00001)
+			iterWithoutImproving = 0;
+		else
+			iterWithoutImproving++;
 
-        if (countTrain == 0 || trainError < minTrainError) {
-            minTrainError = trainError;
-            copyWeights();
-            iterWithoutImproving = 0;
-        } else if ((trainError - minTrainError) < 0.00001) {
-            iterWithoutImproving = 0;
-        } else {
-            iterWithoutImproving++;
-        }
+		if(iterWithoutImproving==50){
+			cout << "We exit because the training is not improving!!"<< endl;
+			restoreWeights();
+			countTrain = maxiter;
+		}
 
-        if (iterWithoutImproving == 50) {
-            cout << "We exit because the training is not improving!!" << endl;
-            restoreWeights();
-            countTrain = maxiter;
-        }
 
-        countTrain++;
-        cout << "Iteration " << countTrain << "\t Training error: " << trainError << endl;
-    } while (countTrain < maxiter);
+		countTrain++;
+
+		cout << "Iteration " << countTrain << "\t Training error: " << trainError << endl;
+
+	} while ( countTrain<maxiter );
 
 	cout << "NETWORK WEIGHTS" << endl;
 	cout << "===============" << endl;
@@ -415,33 +420,31 @@ void MultilayerPerceptron::runBackPropagation(Dataset * trainDataset, Dataset * 
 
 	cout << "Desired output Vs Obtained output (test)" << endl;
 	cout << "=========================================" << endl;
-	for(int i=0; i<testDataset->nOfPatterns; i++){
-		double* prediction = new double[testDataset->nOfOutputs];
+	for(int i=0; i<pDatosTest->nOfPatterns; i++){
+		double* prediction = new double[pDatosTest->nOfOutputs];
 
 		// Feed the inputs and propagate the values
-		feedInputs(testDataset->inputs[i]);
+		feedInputs(pDatosTest->inputs[i]);
 		forwardPropagate();
 		getOutputs(prediction);
-		for(int j=0; j<testDataset->nOfOutputs; j++)
-			cout << testDataset->outputs[i][j] << " -- " << prediction[j] << " ";
+		for(int j=0; j<pDatosTest->nOfOutputs; j++)
+			cout << pDatosTest->outputs[i][j] << " -- " << prediction[j] << " ";
 		cout << endl;
 		delete[] prediction;
 
 	}
 
-    *errorTest = test(testDataset, errorFunction);
+	testError = test(pDatosTest);
+	*errorTest=testError;
 	*errorTrain=minTrainError;
-	*ccrTest = testClassification(testDataset);
-	*ccrTrain = testClassification(trainDataset);
 
 }
 
-// -------------------------
 // Optional Kaggle: Save the model weights in a textfile
-bool MultilayerPerceptron::saveWeights(const char * fileName)
+bool MultilayerPerceptron::saveWeights(const char * archivo)
 {
 	// Object for writing the file
-	ofstream f(fileName);
+	ofstream f(archivo);
 
 	if(!f.is_open())
 		return false;
@@ -450,18 +453,14 @@ bool MultilayerPerceptron::saveWeights(const char * fileName)
 	f << nOfLayers;
 
 	for(int i = 0; i < nOfLayers; i++)
-	{
 		f << " " << layers[i].nOfNeurons;
-	}
-	f << " " << outputFunction;
 	f << endl;
 
 	// Write the weight matrix of every layer
 	for(int i = 1; i < nOfLayers; i++)
 		for(int j = 0; j < layers[i].nOfNeurons; j++)
 			for(int k = 0; k < layers[i-1].nOfNeurons + 1; k++)
-				if(layers[i].neurons[j].w!=NULL)
-				    f << layers[i].neurons[j].w[k] << " ";
+				f << layers[i].neurons[j].w[k] << " ";
 
 	f.close();
 
@@ -470,12 +469,11 @@ bool MultilayerPerceptron::saveWeights(const char * fileName)
 }
 
 
-// -----------------------
 // Optional Kaggle: Load the model weights from a textfile
-bool MultilayerPerceptron::readWeights(const char * fileName)
+bool MultilayerPerceptron::readWeights(const char * archivo)
 {
 	// Object for reading a file
-	ifstream f(fileName);
+	ifstream f(archivo);
 
 	if(!f.is_open())
 		return false;
@@ -491,10 +489,7 @@ bool MultilayerPerceptron::readWeights(const char * fileName)
 
 	// Read number of neurons in every layer
 	for(int i = 0; i < nl; i++)
-	{
 		f >> npl[i];
-	}
-	f >> outputFunction;
 
 	// Initialize vectors and data structures
 	initialize(nl, npl);
@@ -503,8 +498,7 @@ bool MultilayerPerceptron::readWeights(const char * fileName)
 	for(int i = 1; i < nOfLayers; i++)
 		for(int j = 0; j < layers[i].nOfNeurons; j++)
 			for(int k = 0; k < layers[i-1].nOfNeurons + 1; k++)
-				if(!(outputFunction==1 && (i==(nOfLayers-1)) && (j==(layers[i].nOfNeurons-1))))
-					f >> layers[i].neurons[j].w[k];
+				f >> layers[i].neurons[j].w[k];
 
 	f.close();
 	delete[] npl;

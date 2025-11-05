@@ -29,20 +29,19 @@ struct Layer {
 
 class MultilayerPerceptron {
 private:
-	int    nOfLayers;        /* Total number of layers in the network */
-	Layer* layers;           /* Vector containing every layer */
-	int nOfTrainingPatterns; /* For the offline derivatives */
+	int    nOfLayers;     /* Total number of layers in the network */
+	Layer* layers;        /* Vector containing every layer */
 
 	// Free memory for the data structures
 	void freeMemory();
 
-	// Fill all the weights (w) with random numbers between -1 and +1
+	// Feel all the weights (w) with random numbers between -1 and +1
 	void randomWeights();
 
 	// Feed the input neurons of the network with a vector passed as an argument
 	void feedInputs(double* input);
 
-	// Get the outputs predicted by the network (out vector of the output layer) and save them in the vector passed as an argument
+	// Get the outputs predicted by the network (out vector the output layer) and save them in the vector passed as an argument
 	void getOutputs(double* output);
 
 	// Make a copy of all the weights (copy w in wCopy)
@@ -55,12 +54,10 @@ private:
 	void forwardPropagate();
 
 	// Obtain the output error (MSE) of the out vector of the output layer wrt a target vector and return it
-	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	double obtainError(double* target, int errorFunction);
+	double obtainError(double* target);
 
 	// Backpropagate the output error wrt a vector passed as an argument, from the last layer to the first one <--<--
-	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	void backpropagateError(double* target, int errorFunction);
+	void backpropagateError(double* target);
 
 	// Accumulate the changes produced by one pattern and save them in deltaW
 	void accumulateChange();
@@ -73,18 +70,13 @@ private:
 
 	// Perform an epoch: forward propagate the inputs, backpropagate the error and adjust the weights
 	// input is the input vector of the pattern and target is the desired output vector of the pattern
-	// The step of adjusting the weights must be performed only in the online case
-	// If the algorithm is offline, the weightAdjustment must be performed in the "train" function
-	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	void performEpoch(double* input, double* target, int errorFunction);
+	void performEpochOnline(double* input, double* target);
 
 
 public:
 	// Values of the parameters (they are public and can be updated from outside)
 	double eta;             // Learning rate
 	double mu;              // Momentum factor
-	bool   online;          // Online training? (true->online,false->offline)
-	int outputFunction;      /* Type of activation function in the output layer (outputFunction=0 sigmoid, outputFunction=1 softmax) */
 
 	// Constructor: Default values for all the parameters
 	MultilayerPerceptron();
@@ -97,32 +89,26 @@ public:
     // Give values to Layer* layers
 	int initialize(int nl, int npl[]);
 
-	// Test the network with a dataset and return the error
-	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	double test(Dataset* dataset, int errorFunction);
-	
-	// Test the network with a dataset and return the CCR
-	double testClassification(Dataset* dataset);
+	// Test the network with a dataset and return the MSE
+	double test(util::Dataset* dataset);
 
-	// Optional Kaggle: Obtain the predicted outputs for a dataset
-	void predict(Dataset* testDataset);
+	// Obtain the predicted outputs for a dataset
+	void predict(util::Dataset* testDataset);
 
-	// Train the network for a dataset (one iteration of the external loop)
-	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	void train(Dataset* trainDataset, int errorFunction);
+	// Perform an online training for a specific dataset
+	void trainOnline(util::Dataset* trainDataset);
 
 	// Run the traning algorithm for a given number of epochs, using trainDataset
     // Once finished, check the performance of the network in testDataset
     // Both training and test MSEs should be obtained and stored in errorTrain and errorTest
-    // Both training and test CCRs should be obtained and stored in ccrTrain and ccrTest
-	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	void runBackPropagation(Dataset * trainDataset, Dataset * testDataset, int maxiter, double *errorTrain, double *errorTest, double *ccrTrain, double *ccrTest, int errorFunction);
+	void runOnlineBackPropagation(util::Dataset * trainDataset, util::Dataset * testDataset, int maxiter, double *errorTrain, double *errorTest);
 
 	// Optional Kaggle: Save the model weights in a textfile
-	bool saveWeights(const char * fileName);
+	bool saveWeights(const char * archivo);
 
 	// Optional Kaggle: Load the model weights from a textfile
-	bool readWeights(const char * fileName);
+	bool readWeights(const char * archivo);
+
 };
 
 };
