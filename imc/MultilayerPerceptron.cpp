@@ -265,10 +265,10 @@ void MultilayerPerceptron::backpropagateError(double* target, int errorFunction)
 	{
 		double out = outputLayer.neurons[i].out;
 		if (errorFunction == 1 && outputFunction == 1) {
-			// Cross-entropy + softmax: delta = (o - d)
-			outputLayer.neurons[i].delta = out - target[i];
+			// Cross-entropy + softmax: use negative gradient so that w += eta*delta does descent
+			outputLayer.neurons[i].delta = target[i] - out;
 		} else {
-			// MSE + sigmoid (default)
+			// MSE + sigmoid
 			double error = target[i] - out;
 			outputLayer.neurons[i].delta = error * out * (1.0 - out);
 		}
