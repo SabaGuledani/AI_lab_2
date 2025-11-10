@@ -33,16 +33,23 @@ int main(int argc, char **argv) {
     double eta = 0.7;
     double mu = 1.0;
     int iterations = 1000;
-    int layers = 0;
+    int layers = 1;              // default: 1 hidden layer (part 1 & 2)
     int hiddenNeurons = 5;
-    int errorFunction = 0;
+    int errorFunction = 0;       // 0=MSE, 1=Cross-entropy
 
-    bool normalizeData = false;
-    bool onlineMode = false;
-    bool useSoftmax = false;
+    bool normalizeData = false;  // inputs normalization
+    bool onlineMode = false;     // default offline
+    bool useSoftmax = false;     // default sigmoid
+
+    // getopt state and values
+    int c;
+    const char *tvalue = NULL, *Tvalue = NULL, *wvalue = NULL;
+    int *topology = NULL;
+
     opterr = 0;
 
-    // a: Option that requires an argument
+
+     // a: Option that requires an argument
     // a:: The argument required is optional
     while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:psofn:")) != -1)
     {
@@ -58,11 +65,10 @@ int main(int argc, char **argv) {
             case 'm': mflag = true; mu = atof(optarg); break;
             case 'i': iflag = true; iterations = atoi(optarg); break;
             case 'p': pflag = true; break;
-            case 's': sflag = true; useSoftmax = true; break;
-            case 'o': oflag = true; onlineMode = true; break;
-            case 'f': fflag = true; errorFunction = atoi(optarg); break;
-            case 'n': nflag = true; normalizeData = true; break;
-                return EXIT_FAILURE;
+            case 's': sflag = true; useSoftmax = true; break;     // softmax ON
+            case 'o': oflag = true; onlineMode = true; break;     // online ON (default is offline)
+            case 'f': fflag = true; errorFunction = atoi(optarg); break; // 0=MSE,1=CE
+            case 'n': nflag = true; normalizeData = true; break;  // normalize inputs
             default:
                 return EXIT_FAILURE;
         }
@@ -102,21 +108,14 @@ int main(int argc, char **argv) {
             testDataset = trainDataset;
         }
 
-        // Apply normalization if requested: inputs to [-1,1], outputs to [0,1]
-        double *minInputs = NULL; double *maxInputs = NULL; double minOut = 0.0; double maxOut = 0.0;
-        if (sflag) {
+        // Apply normalization if requested: inputs to [-1,1] (outputs are NOT normalized in classification)
+        double *minInputs = NULL; double *maxInputs = NULL;
+        if (nflag) {
             minInputs = minDatasetInputs(trainDataset);
             maxInputs = maxDatasetInputs(trainDataset);
             minMaxScalerDataSetInputs(trainDataset, -1.0, 1.0, minInputs, maxInputs);
             if (testDataset != trainDataset)
                 minMaxScalerDataSetInputs(testDataset, -1.0, 1.0, minInputs, maxInputs);
-
-            // Outputs (especially for regression)
-            minOut = minDatasetOutputs(trainDataset);
-            maxOut = maxDatasetOutputs(trainDataset);
-            minMaxScalerDataSetOutputs(trainDataset, 0.0, 1.0, minOut, maxOut);
-            if (testDataset != trainDataset)
-                minMaxScalerDataSetOutputs(testDataset, 0.0, 1.0, minOut, maxOut);
         }
 
         // Build topology: [inputs, hidden x L, outputs]
@@ -124,7 +123,7 @@ int main(int argc, char **argv) {
         topology[0] = trainDataset->nOfInputs;
         for (int i = 1; i <= layers; ++i) topology[i] = hiddenNeurons;
         topology[layers + 1] = trainDataset->nOfOutputs;
-        
+
         if (!mlp.initialize(layers + 2, topology)) {
             cerr << "Error initializing network topology." << endl;
             return EXIT_FAILURE;
@@ -173,34 +172,52 @@ int main(int argc, char **argv) {
 
         double averageTestError = 0, stdTestError = 0;
         double averageTrainError = 0, stdTrainError = 0;
+        double averageTestCCR = 0, stdTestCCR = 0;
+        double averageTrainCCR = 0, stdTrainCCR = 0;
 
-        // obtain training and test averages and standart deviations
+        // obtain training and test averages and standard deviations
         for (int i = 0; i < 5; ++i) {
             averageTrainError += trainErrors[i];
             averageTestError += testErrors[i];
+            averageTrainCCR += trainCCR[i];
+            averageTestCCR += testCCR[i];
         }
         averageTrainError /= 5.0;
         averageTestError /= 5.0;
+        averageTrainCCR /= 5.0;
+        averageTestCCR /= 5.0;
 
-        double varTrain = 0.0, varTest = 0.0;
+        double varTrain = 0.0, varTest = 0.0, varTrainCCR = 0.0, varTestCCR = 0.0;
         for (int i = 0; i < 5; ++i) {
             double dt = trainErrors[i] - averageTrainError;
             double dv = testErrors[i] - averageTestError;
             varTrain += dt * dt;
             varTest += dv * dv;
+
+            double dct = trainCCR[i] - averageTrainCCR;
+            double dcv = testCCR[i] - averageTestCCR;
+            varTrainCCR += dct * dct;
+            varTestCCR += dcv * dcv;
         }
         stdTrainError = sqrt(varTrain / 5.0);
         stdTestError = sqrt(varTest / 5.0);
+        stdTrainCCR = sqrt(varTrainCCR / 5.0);
+        stdTestCCR = sqrt(varTestCCR / 5.0);
 
         cout << "FINAL REPORT" << endl;
         cout << "************" << endl;
         cout << "Train error (Mean +- SD): " << averageTrainError << " +- " << stdTrainError << endl;
-        cout << "Test error (Mean +- SD):          " << averageTestError << " +- " << stdTestError << endl;
+        cout << "Test error  (Mean +- SD): " << averageTestError  << " +- " << stdTestError  << endl;
+        cout << "Train CCR   (Mean +- SD): " << averageTrainCCR   << " +- " << stdTrainCCR   << endl;
+        cout << "Test CCR    (Mean +- SD): " << averageTestCCR    << " +- " << stdTestCCR    << endl;
+
         // Cleanup
         delete[] testErrors;
         delete[] trainErrors;
+        delete[] testCCR;
+        delete[] trainCCR;
         delete[] topology;
-        if (sflag) { delete[] minInputs; delete[] maxInputs; }
+        if (nflag) { delete[] minInputs; delete[] maxInputs; }
 
         return EXIT_SUCCESS;
     }

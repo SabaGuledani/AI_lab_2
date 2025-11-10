@@ -40,8 +40,6 @@ MultilayerPerceptron::MultilayerPerceptron()
 // nl is the number of layers and npl is a vetor containing the number of neurons in every layer
 // Give values to Layer* layers
 int MultilayerPerceptron::initialize(int nl, int npl[]) {
-	srand(time(nullptr));
-
 	//  store number of layers
 	nOfLayers = nl;
 
@@ -125,21 +123,20 @@ void MultilayerPerceptron::freeMemory() {
 // ------------------------------
 // fill all the weights (w) with random numbers between -1 and +1
 void MultilayerPerceptron::randomWeights() {
-for (int i = 1; i < nOfLayers; i++) // start from 1 because we dont initialize for input layer
-{
-	for (int j = 0; j < layers[i].nOfNeurons; j++)
+	for (int i = 1; i < nOfLayers; i++) // start from 1 because we dont initialize for input layer
 	{
-		int nInputs = layers[i-1].nOfNeurons +1;
-		for (int k = 0; k < nInputs; k++)
+		for (int j = 0; j < layers[i].nOfNeurons; j++)
 		{
-			layers[i].neurons[j].w[k] = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+			int nInputs = layers[i-1].nOfNeurons +1;
+			for (int k = 0; k < nInputs; k++)
+			{
+				layers[i].neurons[j].w[k] = ((double)rand() / RAND_MAX) * 2.0 - 1.0;
+				layers[i].neurons[j].deltaW[k] = 0.0;       // clear accumulators (batch)
+				layers[i].neurons[j].lastDeltaW[k] = 0.0;   // clear momentum
+			}
 		}
-		
 	}
-	
-}
-
-}
+	}
 
 // ------------------------------
 // Feed the input neurons of the network with a vector passed as an argument
@@ -486,67 +483,65 @@ void MultilayerPerceptron::predict(Dataset* dataset)
 // errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
 void MultilayerPerceptron::runBackPropagation(Dataset * trainDataset, Dataset * testDataset, int maxiter, double *errorTrain, double *errorTest, double *ccrTrain, double *ccrTest, int errorFunction)
 {
-	int countTrain = 0;
+    int countTrain = 0;
 
-	// Random assignment of weights (starting point)
-	randomWeights();
+    // Random assignment of weights (starting point)
+    randomWeights();
 
     double minTrainError = 0.0;
     int iterWithoutImproving = 0;
+    const double tol = 1e-5;
     nOfTrainingPatterns = trainDataset->nOfPatterns;
 
-    // Learning (currently behaves like the previous online outer loop)
+    // Learning
     do {
-        // One external-iteration training step (online/offline to be handled inside train)
         train(trainDataset, errorFunction);
 
         double trainError = test(trainDataset, errorFunction);
 
-        if (countTrain == 0 || trainError < minTrainError) {
+        if (countTrain == 0 || trainError < minTrainError - tol) {
             minTrainError = trainError;
             copyWeights();
             iterWithoutImproving = 0;
-        } else if ((trainError - minTrainError) < 0.00001) {
-            iterWithoutImproving = 0;
         } else {
+            // improvement <= tol counts as "no improvement"
             iterWithoutImproving++;
         }
 
-        if (iterWithoutImproving == 50) {
+        if (iterWithoutImproving >= 50) {
             cout << "We exit because the training is not improving!!" << endl;
-            restoreWeights();
-            countTrain = maxiter;
+            break;
         }
 
         countTrain++;
         cout << "Iteration " << countTrain << "\t Training error: " << trainError << endl;
     } while (countTrain < maxiter);
 
-	cout << "NETWORK WEIGHTS" << endl;
-	cout << "===============" << endl;
-	printNetwork();
+    // Restore best weights before evaluation
+    restoreWeights();
 
-	cout << "Desired output Vs Obtained output (test)" << endl;
-	cout << "=========================================" << endl;
-	for(int i=0; i<testDataset->nOfPatterns; i++){
-		double* prediction = new double[testDataset->nOfOutputs];
+    cout << "NETWORK WEIGHTS" << endl;
+    cout << "===============" << endl;
+    printNetwork();
 
-		// Feed the inputs and propagate the values
-		feedInputs(testDataset->inputs[i]);
-		forwardPropagate();
-		getOutputs(prediction);
-		for(int j=0; j<testDataset->nOfOutputs; j++)
-			cout << testDataset->outputs[i][j] << " -- " << prediction[j] << " ";
-		cout << endl;
-		delete[] prediction;
+    cout << "Desired output Vs Obtained output (test)" << endl;
+    cout << "=========================================" << endl;
+    for(int i=0; i<testDataset->nOfPatterns; i++){
+        double* prediction = new double[testDataset->nOfOutputs];
 
-	}
+        feedInputs(testDataset->inputs[i]);
+        forwardPropagate();
+        getOutputs(prediction);
+        for(int j=0; j<testDataset->nOfOutputs; j++)
+            cout << testDataset->outputs[i][j] << " -- " << prediction[j] << " ";
+        cout << endl;
+        delete[] prediction;
+    }
 
     *errorTest = test(testDataset, errorFunction);
-	*errorTrain=minTrainError;
-	*ccrTest = testClassification(testDataset);
-	*ccrTrain = testClassification(trainDataset);
-
+    *errorTrain = minTrainError;
+    *ccrTest = testClassification(testDataset);
+    *ccrTrain = testClassification(trainDataset);
 }
 
 // -------------------------

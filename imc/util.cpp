@@ -2,6 +2,8 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>  // To establish the seed srand() and generate pseudorandom numbers rand()
+#include <vector>
+#include <algorithm>
 
 #include "util.h"
 
@@ -228,5 +230,25 @@ double util::maxDatasetOutputs(Dataset *dataset)
         }
     }
     return m;
+}
+
+int* util::integerRandomVectoWithoutRepeating(int low, int high, int n)
+{
+    if (high - low + 1 != n) {
+        // Fallback: build based on n
+        low = 0;
+        high = n - 1;
+    }
+    std::vector<int> v;
+    v.reserve(n);
+    for (int x = low; x <= high; ++x) v.push_back(x);
+    // Fisher–Yates using rand()
+    for (int i = n - 1; i > 0; --i) {
+        int j = util::randomInt(0, i);
+        std::swap(v[i], v[j]);
+    }
+    int* out = new int[n];
+    for (int i = 0; i < n; ++i) out[i] = v[i];
+    return out;
 }
 
