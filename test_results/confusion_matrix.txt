@@ -1,0 +1,8 @@
+Confusion Matrix (rows=true, cols=predicted)
+Classes: a=0, b=1, c=2, d=3, e=4, f=5
+43 2 4 0 1 0
+1 46 2 1 0 0
+0 3 47 0 0 0
+3 10 0 37 0 0
+2 7 4 0 37 0
+24 2 20 2 2 0
