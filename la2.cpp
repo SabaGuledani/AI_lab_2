@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
      // a: Option that requires an argument
     // a:: The argument required is optional
-    while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:psofn:")) != -1)
+    while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:psof:n:")) != -1)
     {
         // The parameters needed for using the optional prediction mode of Kaggle have been included.
         // You should add the rest of parameters needed for the lab assignment.
@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
             case 'p': pflag = true; break;
             case 's': sflag = true; useSoftmax = true; break;     // softmax ON
             case 'o': oflag = true; onlineMode = true; break;     // online ON (default is offline)
-            case 'f': fflag = true; errorFunction = atoi(optarg); break; // 0=MSE,1=CE
+            case 'f': fflag = true; errorFunction = atoi(optarg); break;
             case 'n': nflag = true; normalizeData = true; break;  // normalize inputs
             default:
                 return EXIT_FAILURE;
