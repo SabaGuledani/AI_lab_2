@@ -26,73 +26,42 @@ using namespace util;
 
 int main(int argc, char **argv) {
     // Process arguments of the command line
-    bool Tflag = 0, wflag = 0, pflag = 0, tflag = 0, lflag = 0, eflag = 0, mflag = 0, iflag = 0, hflag = 0, sflag = 0;
-    char *Tvalue = NULL, *wvalue = NULL, *tvalue = NULL;
-    int c;
+    bool Tflag = false, wflag = false, pflag = false, tflag = false;
+    bool lflag = false, eflag = false, mflag = false, iflag = false, hflag = false;
+    bool nflag = false, oflag = false, sflag = false, fflag = false;
 
-     // Training parameters
-    double eta = 0.1;     // Learning rate
-    double mu = 0.9;      // Momentum
+    double eta = 0.7;
+    double mu = 1.0;
     int iterations = 1000;
-    int layers = 0;          // number of hidden layers
-    int hiddenNeurons = 5;   // neurons per hidden layer
-    int *topology = NULL;
+    int layers = 0;
+    int hiddenNeurons = 5;
+    int errorFunction = 0;
 
+    bool normalizeData = false;
+    bool onlineMode = false;
+    bool useSoftmax = false;
     opterr = 0;
 
     // a: Option that requires an argument
     // a:: The argument required is optional
-    while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:ps")) != -1)
+    while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:psofn:")) != -1)
     {
         // The parameters needed for using the optional prediction mode of Kaggle have been included.
         // You should add the rest of parameters needed for the lab assignment.
          switch(c){
-            case 't':   // Training dataset
-                tflag = true;
-                tvalue = optarg;
-                break;
-            case 'T':   // Test dataset
-                Tflag = true;
-                Tvalue = optarg;
-                break;
-            case 'w':   // Weights file
-                wflag = true;
-                wvalue = optarg;
-                break;
-            case 'l':   // Number of hidden layers
-                lflag = true;
-                layers = atoi(optarg);
-                break;
-            case 'h':   // Neurons per hidden layer
-                hflag = true;
-                hiddenNeurons = atoi(optarg);
-                break;
-            case 'e':   // Learning rate
-                eflag = true;
-                eta = atof(optarg);
-                break;
-            case 'm':   // Momentum
-                mflag = true;
-                mu = atof(optarg);
-                break;
-            case 'i':   // Iterations
-                iflag = true;
-                iterations = atoi(optarg);
-                break;
-            case 'p':   // Prediction mode
-                pflag = true;
-                break;
-            case 's':   // Normalize datasets after reading
-                sflag = true;
-                break;
-            case '?':
-                if (optopt == 'T' || optopt == 'w' || optopt == 't' || optopt == 'l' || optopt == 'h' ||
-                    optopt == 'e' || optopt == 'm' || optopt == 'i')
-                    fprintf(stderr, "The option -%c requires an argument.\n", optopt);
-                else if (isprint(optopt))
-                    fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-                else
-                    fprintf(stderr, "Unknown character `\\x%x'.\n", optopt);
+            case 't': tflag = true; tvalue = optarg; break;
+            case 'T': Tflag = true; Tvalue = optarg; break;
+            case 'w': wflag = true; wvalue = optarg; break;
+            case 'l': lflag = true; layers = atoi(optarg); break;
+            case 'h': hflag = true; hiddenNeurons = atoi(optarg); break;
+            case 'e': eflag = true; eta = atof(optarg); break;
+            case 'm': mflag = true; mu = atof(optarg); break;
+            case 'i': iflag = true; iterations = atoi(optarg); break;
+            case 'p': pflag = true; break;
+            case 's': sflag = true; useSoftmax = true; break;
+            case 'o': oflag = true; onlineMode = true; break;
+            case 'f': fflag = true; errorFunction = atoi(optarg); break;
+            case 'n': nflag = true; normalizeData = true; break;
                 return EXIT_FAILURE;
             default:
                 return EXIT_FAILURE;
@@ -105,7 +74,7 @@ int main(int argc, char **argv) {
         //////////////////////////////////
 
         if (!tflag || !lflag) {
-            cerr << "Usage: ./la1 -t train.txt [-T test.txt] -l nHiddenLayers [-h hiddenNeurons] [-i iter -e eta -m mu -s -w weights]" << endl;
+            cerr << "Usage: ./la2 -t train.txt [-T test.txt] -l nHiddenLayers [-h hiddenNeurons] [-i iter -e eta -m mu -o -f {0|1} -s -n -w weights]" << endl;
             return EXIT_FAILURE;
         }
 
@@ -113,6 +82,8 @@ int main(int argc, char **argv) {
 		MultilayerPerceptron mlp;
         mlp.eta = eta;
         mlp.mu = mu;
+        mlp.online = onlineMode;
+        mlp.outputFunction = useSoftmax ? 1 : 0;
 
         // Read training and test data
 		Dataset * trainDataset = readData(tvalue);
@@ -153,31 +124,46 @@ int main(int argc, char **argv) {
         topology[0] = trainDataset->nOfInputs;
         for (int i = 1; i <= layers; ++i) topology[i] = hiddenNeurons;
         topology[layers + 1] = trainDataset->nOfOutputs;
-
-        // Initialize topology vector
-        //int *topology = new int[layers+2];
-        //topology[0] = trainDataset->nOfInputs;
-        //for(int i=1; i<(layers+2-1); i++)
-        //    topology[i] = neurons;
-        //topology[layers+2-1] = trainDataset->nOfOutputs;
-        //mlp.initialize(layers+2,topology);
+        
+        if (!mlp.initialize(layers + 2, topology)) {
+            cerr << "Error initializing network topology." << endl;
+            return EXIT_FAILURE;
+        }
 
         // Seed for random numbers
         int seeds[] = {1,2,3,4,5};
         double *testErrors = new double[5];
         double *trainErrors = new double[5];
+        double *testCCR = new double[5];
+        double *trainCCR = new double[5];
         double bestTestError = DBL_MAX;
-        for(int i=0; i<5; i++){
+        for (int i = 0; i < 5; ++i) {
             cout << "**********" << endl;
             cout << "SEED " << seeds[i] << endl;
             cout << "**********" << endl;
             srand(seeds[i]);
-            mlp.runOnlineBackPropagation(trainDataset,testDataset,iterations,&(trainErrors[i]),&(testErrors[i]));
-            cout << "We end!! => Final test error: " << testErrors[i] << endl;
-
-            // We save the weights every time we find a better model
-            if(wflag && testErrors[i] <= bestTestError)
-            {
+        
+            double errTrain = 0.0, errTest = 0.0, ccrTrain = 0.0, ccrTest = 0.0;
+            mlp.runBackPropagation(
+                trainDataset,
+                testDataset,
+                iterations,
+                &errTrain,
+                &errTest,
+                &ccrTrain,
+                &ccrTest,
+                errorFunction
+            );
+        
+            trainErrors[i] = errTrain;
+            testErrors[i] = errTest;
+            trainCCR[i] = ccrTrain;
+            testCCR[i] = ccrTest;
+        
+            cout << "We end!! => Final test error: " << testErrors[i]
+                 << " | Final test CCR: " << testCCR[i] << endl;
+        
+            if (wflag && testErrors[i] <= bestTestError) {
                 mlp.saveWeights(wvalue);
                 bestTestError = testErrors[i];
             }
@@ -188,7 +174,7 @@ int main(int argc, char **argv) {
         double averageTestError = 0, stdTestError = 0;
         double averageTrainError = 0, stdTrainError = 0;
 
-        // Obtain training and test averages and standard deviations
+        // obtain training and test averages and standart deviations
         for (int i = 0; i < 5; ++i) {
             averageTrainError += trainErrors[i];
             averageTestError += testErrors[i];
