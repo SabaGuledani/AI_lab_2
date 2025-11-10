@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <cstdlib>  // To establish the seed srand() and generate pseudorandom numbers rand()
+#include <cstdlib>  // for setting seed srand() and generating random numbers rand()
 #include <vector>
 #include <algorithm>
 
@@ -12,25 +12,25 @@ using namespace util;
 
 
 // ------------------------------
-// Obtain an integer random number in the range [Low,High]
+// obtain an integer random number in the range [Low,High]
 int util::randomInt(int Low, int High)
 {
 	return rand() % (High-Low+1) + Low;
 }
 
 // ------------------------------
-// Obtain a real random number in the range [Low,High]
+// obtain a real random number in the range [Low,High]
 double util::randomDouble(double Low, double High)
 {
 	return ((double) rand() / RAND_MAX) * (High-Low) + Low;
 }
 
 // ------------------------------
-// Read a dataset from a file name and return it
+// read a dataset from a file name and return it
 Dataset *util::readData(const char *fileName)
 {
 
-    ifstream myFile(fileName); // Create an input stream
+    ifstream myFile(fileName); // create an input stream
 
     if (!myFile.is_open())
     {
@@ -47,7 +47,7 @@ Dataset *util::readData(const char *fileName)
 
     if (myFile.good())
     {
-        getline(myFile, line); // Read a line
+        getline(myFile, line); // read a line
         istringstream iss(line);
         iss >> dataset->nOfInputs;
         iss >> dataset->nOfOutputs;
@@ -65,7 +65,7 @@ Dataset *util::readData(const char *fileName)
     i = 0;
     while (myFile.good())
     {
-        getline(myFile, line); // Read a line
+        getline(myFile, line); // read a line
         if (!line.empty())
         {
             istringstream iss(line);
@@ -96,7 +96,7 @@ Dataset *util::readData(const char *fileName)
 
 
 // ------------------------------
-// Print the dataset
+// print the dataset
 void util::printDataset(Dataset *dataset, int len)
 {
     if (len == 0)
@@ -119,12 +119,12 @@ void util::printDataset(Dataset *dataset, int len)
 }
 
 // ------------------------------
-// Transform an scalar x by scaling it to a given range [minAllowed, maxAllowed] considering the min
-// and max values of the feature in the dataset (minData and maxData). 
+// transform a scalar x by scaling it to a given range [minAllowed, maxAllowed] considering the min
+// and max values of the feature in dataset (minData and maxData)
 double util::minMaxScaler(double x, double minAllowed, double maxAllowed, double minData, double maxData)
 {
     if (maxData == minData) {
-        // Avoid division by zero: map to midpoint of allowed range
+        // avoid division by zero: map to midpoint of allowed range
         return (minAllowed + maxAllowed) / 2.0;
     }
     double scaled = (x - minData) / (maxData - minData);            // [0,1]
@@ -132,12 +132,12 @@ double util::minMaxScaler(double x, double minAllowed, double maxAllowed, double
 }
 
 // ------------------------------
-// Scale the dataset inputs to a given range [minAllowed, maxAllowed] considering the min
-// and max values of the feature in the dataset (minData and maxData). 
+// scale the dataset inputs to a given range [minAllowed, maxAllowed] considering the min
+// and max values of the feature in the dataset (minData and maxData)
 void util::minMaxScalerDataSetInputs(Dataset *dataset, double minAllowed, double maxAllowed,
                                      double *minData, double *maxData)
 {
-    // Scale each feature (column) independently using provided min/max vectors
+    // scale each feature (column) independently using provided min/max vectors
     for (int p = 0; p < dataset->nOfPatterns; ++p)
     {
         for (int j = 0; j < dataset->nOfInputs; ++j)
@@ -149,8 +149,8 @@ void util::minMaxScalerDataSetInputs(Dataset *dataset, double minAllowed, double
 }
 
 // ------------------------------
-// Scale the dataset output vector to a given range [minAllowed, maxAllowed] considering the min
-// and max values of the feature in the dataset (minData and maxData). Only for regression problems. 
+// scale the dataset output vector to a given range [minAllowed, maxAllowed] considering the min
+// and max values of the feature in the dataset (minData and maxData). only for regression problems
 void util::minMaxScalerDataSetOutputs(Dataset *dataset, double minAllowed, double maxAllowed,
                                       double minData, double maxData)
 {
@@ -165,7 +165,7 @@ void util::minMaxScalerDataSetOutputs(Dataset *dataset, double minAllowed, doubl
 }
 
 // ------------------------------
-// Get a vector of minimum values of the dataset inputs
+// get a vector of minimum values of the dataset inputs
 double *util::minDatasetInputs(Dataset *dataset)
 {
     double *mins = new double[dataset->nOfInputs];
@@ -184,7 +184,7 @@ double *util::minDatasetInputs(Dataset *dataset)
 }
 
 // ------------------------------
-// Get a vector of maximum values of the dataset inputs
+// get a vector of maximum values of the dataset inputs
 double *util::maxDatasetInputs(Dataset *dataset)
 {
     double *maxs = new double[dataset->nOfInputs];
@@ -203,7 +203,7 @@ double *util::maxDatasetInputs(Dataset *dataset)
 }
 
 // ------------------------------
-// Get the minimum value of the dataset outputs
+// get the minimum value of the dataset outputs
 double util::minDatasetOutputs(Dataset *dataset)
 {
     double m = dataset->outputs[0][0];
@@ -218,7 +218,7 @@ double util::minDatasetOutputs(Dataset *dataset)
 }
 
 // ------------------------------
- // Get the maximum value of the dataset outputs
+ // get the maximum value of the dataset outputs
 double util::maxDatasetOutputs(Dataset *dataset)
 {
     double m = dataset->outputs[0][0];
@@ -235,14 +235,14 @@ double util::maxDatasetOutputs(Dataset *dataset)
 int* util::integerRandomVectoWithoutRepeating(int low, int high, int n)
 {
     if (high - low + 1 != n) {
-        // Fallback: build based on n
+        // fallback: build based on n
         low = 0;
         high = n - 1;
     }
     std::vector<int> v;
     v.reserve(n);
     for (int x = low; x <= high; ++x) v.push_back(x);
-    // Fisher–Yates using rand()
+    // fisher-yates shuffle using rand()
     for (int i = n - 1; i > 0; --i) {
         int j = util::randomInt(0, i);
         std::swap(v[i], v[j]);

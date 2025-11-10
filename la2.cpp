@@ -25,7 +25,7 @@ using namespace std;
 using namespace util;
 
 int main(int argc, char **argv) {
-    // Process arguments of the command line
+    // process command line arguments
     bool Tflag = false, wflag = false, pflag = false, tflag = false;
     bool lflag = false, eflag = false, mflag = false, iflag = false, hflag = false;
     bool nflag = false, oflag = false, sflag = false, fflag = false;
@@ -33,13 +33,13 @@ int main(int argc, char **argv) {
     double eta = 0.7;
     double mu = 1.0;
     int iterations = 1000;
-    int layers = 1;              // default: 1 hidden layer (part 1 & 2)
+    int layers = 1;              // default is 1 hidden layer (for part 1 & 2)
     int hiddenNeurons = 5;
-    int errorFunction = 0;       // 0=MSE, 1=Cross-entropy
+    int errorFunction = 0;       // 0=MSE, 1=Cross-Entropy
 
-    bool normalizeData = false;  // inputs normalization
-    bool onlineMode = false;     // default offline
-    bool useSoftmax = false;     // default sigmoid
+    bool normalizeData = false;  // normalize inputs if needed
+    bool onlineMode = false;     // offline by default
+    bool useSoftmax = false;     // sigmoid by default
 
     // getopt state and values
     int c;
@@ -65,10 +65,10 @@ int main(int argc, char **argv) {
             case 'm': mflag = true; mu = atof(optarg); break;
             case 'i': iflag = true; iterations = atoi(optarg); break;
             case 'p': pflag = true; break;
-            case 's': sflag = true; useSoftmax = true; break;     // softmax ON
-            case 'o': oflag = true; onlineMode = true; break;     // online ON (default is offline)
+            case 's': sflag = true; useSoftmax = true; break;     // enable softmax
+            case 'o': oflag = true; onlineMode = true; break;     // enable online mode (offline is default)
             case 'f': fflag = true; errorFunction = atoi(optarg); break;
-            case 'n': nflag = true; normalizeData = true; break;  // normalize inputs
+            case 'n': nflag = true; normalizeData = true; break;  // normalize the inputs
             default:
                 return EXIT_FAILURE;
         }
@@ -84,14 +84,14 @@ int main(int argc, char **argv) {
             return EXIT_FAILURE;
         }
 
-        // Multilayer perceptron object
+        // create multilayer perceptron object
 		MultilayerPerceptron mlp;
         mlp.eta = eta;
         mlp.mu = mu;
         mlp.online = onlineMode;
         mlp.outputFunction = useSoftmax ? 1 : 0;
 
-        // Read training and test data
+        // read training and test data
 		Dataset * trainDataset = readData(tvalue);
         if(trainDataset == NULL){
             cerr << "The training file is not valid, we can not continue" << endl;
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
                 minMaxScalerDataSetInputs(testDataset, -1.0, 1.0, minInputs, maxInputs);
         }
 
-        // Build topology: [inputs, hidden x L, outputs]
+        // build topology: [inputs, hidden x L, outputs]
         topology = new int[layers + 2];
         topology[0] = trainDataset->nOfInputs;
         for (int i = 1; i <= layers; ++i) topology[i] = hiddenNeurons;
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
             return EXIT_FAILURE;
         }
 
-        // Seed for random numbers
+        // seed for random numbers
         int seeds[] = {1,2,3,4,5};
         double *testErrors = new double[5];
         double *trainErrors = new double[5];
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
         double averageTestCCR = 0, stdTestCCR = 0;
         double averageTrainCCR = 0, stdTrainCCR = 0;
 
-        // obtain training and test averages and standard deviations
+        // calculate training and test averages and standard deviations
         for (int i = 0; i < 5; ++i) {
             averageTrainError += trainErrors[i];
             averageTestError += testErrors[i];
