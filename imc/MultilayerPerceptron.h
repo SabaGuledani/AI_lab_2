@@ -97,27 +97,27 @@ public:
     // Give values to Layer* layers
 	int initialize(int nl, int npl[]);
 
-	// Test the network with a dataset and return the error
+// Test the network with a dataset and return the error
 	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	double test(Dataset* dataset, int errorFunction);
+	double test(util::Dataset* dataset, int errorFunction);
 	
 	// Test the network with a dataset and return the CCR
-	double testClassification(Dataset* dataset);
+	double testClassification(util::Dataset* dataset);
 
 	// Optional Kaggle: Obtain the predicted outputs for a dataset
-	void predict(Dataset* testDataset);
+	void predict(util::Dataset* testDataset);
 
 	// Train the network for a dataset (one iteration of the external loop)
 	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	void train(Dataset* trainDataset, int errorFunction);
+	void train(util::Dataset* trainDataset, int errorFunction);
 
 	// Run the traning algorithm for a given number of epochs, using trainDataset
     // Once finished, check the performance of the network in testDataset
     // Both training and test MSEs should be obtained and stored in errorTrain and errorTest
     // Both training and test CCRs should be obtained and stored in ccrTrain and ccrTest
 	// errorFunction=1 => Cross Entropy // errorFunction=0 => MSE
-	void runBackPropagation(Dataset * trainDataset, Dataset * testDataset, int maxiter, double *errorTrain, double *errorTest, double *ccrTrain, double *ccrTest, int errorFunction);
-
+	void runBackPropagation(util::Dataset * trainDataset, util::Dataset * testDataset, int maxiter, double *errorTrain, double *errorTest, double *ccrTrain, double *ccrTest, int errorFunction);
+	
 	// Optional Kaggle: Save the model weights in a textfile
 	bool saveWeights(const char * fileName);
 
