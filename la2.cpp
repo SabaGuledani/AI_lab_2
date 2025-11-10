@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
      // a: Option that requires an argument
     // a:: The argument required is optional
-    while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:psof:n:")) != -1)
+    while ((c = getopt(argc, argv, "t:T:w:l:h:e:m:i:psof:n")) != -1)
     {
         // The parameters needed for using the optional prediction mode of Kaggle have been included.
         // You should add the rest of parameters needed for the lab assignment.
