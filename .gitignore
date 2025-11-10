@@ -1,5 +1,6 @@
 *.jpg
-*.txt
+instructions_part_1.txt
+instructions_part_2.txt
 *.json
 *.png
 *.xml
