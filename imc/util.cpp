@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <cstdlib>  // for setting seed srand() and generating random numbers rand()
+#include <cstdlib>  // To establish the seed srand() and generate pseudorandom numbers rand()
 #include <vector>
 #include <algorithm>
 
@@ -12,14 +12,14 @@ using namespace util;
 
 
 // ------------------------------
-// obtain an integer random number in the range [Low,High]
+// Obtain an integer random number in the range [Low,High]
 int util::randomInt(int Low, int High)
 {
 	return rand() % (High-Low+1) + Low;
 }
 
 // ------------------------------
-// obtain a real random number in the range [Low,High]
+// Obtain a real random number in the range [Low,High]
 double util::randomDouble(double Low, double High)
 {
 	return ((double) rand() / RAND_MAX) * (High-Low) + Low;
@@ -96,7 +96,7 @@ Dataset *util::readData(const char *fileName)
 
 
 // ------------------------------
-// print the dataset
+// Print the dataset
 void util::printDataset(Dataset *dataset, int len)
 {
     if (len == 0)
@@ -120,7 +120,7 @@ void util::printDataset(Dataset *dataset, int len)
 
 // ------------------------------
 // transform a scalar x by scaling it to a given range [minAllowed, maxAllowed] considering the min
-// and max values of the feature in dataset (minData and maxData)
+// and max values of the feature in the dataset (minData and maxData)
 double util::minMaxScaler(double x, double minAllowed, double maxAllowed, double minData, double maxData)
 {
     if (maxData == minData) {
@@ -149,8 +149,8 @@ void util::minMaxScalerDataSetInputs(Dataset *dataset, double minAllowed, double
 }
 
 // ------------------------------
-// scale the dataset output vector to a given range [minAllowed, maxAllowed] considering the min
-// and max values of the feature in the dataset (minData and maxData). only for regression problems
+// Scale the dataset output vector to a given range [minAllowed, maxAllowed] considering the min
+// and max values of the feature in the dataset (minData and maxData). Only for regression problems
 void util::minMaxScalerDataSetOutputs(Dataset *dataset, double minAllowed, double maxAllowed,
                                       double minData, double maxData)
 {
@@ -165,7 +165,7 @@ void util::minMaxScalerDataSetOutputs(Dataset *dataset, double minAllowed, doubl
 }
 
 // ------------------------------
-// get a vector of minimum values of the dataset inputs
+// Get a vector of minimum values of the dataset inputs
 double *util::minDatasetInputs(Dataset *dataset)
 {
     double *mins = new double[dataset->nOfInputs];
@@ -184,7 +184,7 @@ double *util::minDatasetInputs(Dataset *dataset)
 }
 
 // ------------------------------
-// get a vector of maximum values of the dataset inputs
+// Get a vector of maximum values of the dataset inputs
 double *util::maxDatasetInputs(Dataset *dataset)
 {
     double *maxs = new double[dataset->nOfInputs];
@@ -203,7 +203,7 @@ double *util::maxDatasetInputs(Dataset *dataset)
 }
 
 // ------------------------------
-// get the minimum value of the dataset outputs
+// Get the minimum value of the dataset outputs
 double util::minDatasetOutputs(Dataset *dataset)
 {
     double m = dataset->outputs[0][0];
